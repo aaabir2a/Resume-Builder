@@ -14,9 +14,11 @@ function CVPreview() {
   const router = useRouter();
   const { cv, loading, error, fetchCV } = useCV();
   const cvRef = useRef(null);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (id && typeof id === "string") {
+    if (id && typeof id === "string" && !hasFetched.current) {
+      hasFetched.current = true;
       fetchCV(id);
     }
   }, [id, fetchCV]);
@@ -44,7 +46,7 @@ function CVPreview() {
     pdf.save(`${cv?.personalInfo.fullName || "CV"}.pdf`);
   };
 
-  if (loading) {
+  if (loading && !cv) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
         <p>Loading CV data...</p>

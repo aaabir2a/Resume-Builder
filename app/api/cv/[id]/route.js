@@ -3,7 +3,7 @@ import clientPromise from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
 import { ObjectId } from "mongodb";
 
-export async function GET(req, { params }) {
+export async function GET(request, context) {
   try {
     const user = await getSession();
 
@@ -11,7 +11,8 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Ensure params is awaited before using its properties
+    // In Next.js 15, params is a Promise that needs to be awaited
+    const params = await context.params;
     const id = params.id;
 
     const client = await clientPromise;
@@ -37,7 +38,7 @@ export async function GET(req, { params }) {
   }
 }
 
-export async function PUT(req, { params }) {
+export async function PUT(request, context) {
   try {
     const user = await getSession();
 
@@ -45,10 +46,11 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Ensure params is awaited before using its properties
+    // In Next.js 15, params is a Promise that needs to be awaited
+    const params = await context.params;
     const id = params.id;
 
-    const cvData = await req.json();
+    const cvData = await request.json();
 
     const client = await clientPromise;
     const db = client.db();
@@ -65,8 +67,12 @@ export async function PUT(req, { params }) {
     }
 
     const now = new Date();
+
+    // Create a new object without the _id field to avoid the immutable field error
+    const { _id, ...cvDataWithoutId } = cvData;
+
     const updatedCV = {
-      ...cvData,
+      ...cvDataWithoutId,
       userId: user._id,
       lastUpdated: now,
     };
@@ -91,7 +97,7 @@ export async function PUT(req, { params }) {
   }
 }
 
-export async function DELETE(req, { params }) {
+export async function DELETE(request, context) {
   try {
     const user = await getSession();
 
@@ -99,7 +105,8 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Ensure params is awaited before using its properties
+    // In Next.js 15, params is a Promise that needs to be awaited
+    const params = await context.params;
     const id = params.id;
 
     const client = await clientPromise;

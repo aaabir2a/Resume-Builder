@@ -1,123 +1,157 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { CVProvider } from "@/contexts/cv-context"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, Download, Save } from "lucide-react"
-import PersonalInfoForm from "@/components/cv/personal-info-form"
-import EducationForm from "@/components/cv/education-form"
-import ExperienceForm from "@/components/cv/experience-form"
-import SkillsForm from "@/components/cv/skills-form"
-import ProjectsForm from "@/components/cv/projects-form"
-import { useCV } from "@/contexts/cv-context"
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { CVProvider } from "@/contexts/cv-context";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, Download, Save } from "lucide-react";
+import PersonalInfoForm from "@/components/cv/personal-info-form";
+import EducationForm from "@/components/cv/education-form";
+import ExperienceForm from "@/components/cv/experience-form";
+import SkillsForm from "@/components/cv/skills-form";
+import ProjectsForm from "@/components/cv/projects-form";
+import { useCV } from "@/contexts/cv-context";
 
 function CVEditor() {
-  const { id } = useParams()
-  const router = useRouter()
-  const { cv, loading, error, fetchCV, saveCV, updateProgress } = useCV()
-  const [activeTab, setActiveTab] = useState("personal")
-  const [saving, setSaving] = useState(false)
+  const { id } = useParams();
+  const router = useRouter();
+  const { cv, loading, error, fetchCV, saveCV, updateProgress } = useCV();
+  const [activeTab, setActiveTab] = useState("personal");
+  const [saving, setSaving] = useState(false);
+  const hasFetched = useRef(false);
+  const progressUpdateTimeout = useRef(null);
+  const lastCalculatedProgress = useRef(0);
 
   useEffect(() => {
-    if (id && typeof id === "string") {
-      fetchCV(id)
+    if (id && typeof id === "string" && !hasFetched.current) {
+      hasFetched.current = true;
+      fetchCV(id);
     }
-  }, [id, fetchCV])
+  }, [id, fetchCV]);
 
   const handleSave = async () => {
-    if (!cv) return
+    if (!cv) return;
 
-    setSaving(true)
-    await saveCV(cv)
-    setSaving(false)
-  }
+    setSaving(true);
+    await saveCV(cv);
+    setSaving(false);
+  };
 
-  const calculateProgress = () => {
-    if (!cv) return 0
+  const calculateProgress = useCallback(() => {
+    if (!cv) return 0;
 
-    let totalFields = 0
-    let filledFields = 0
+    let totalFields = 0;
+    let filledFields = 0;
 
     // Personal Info
-    const personalInfoFields = Object.values(cv.personalInfo)
-    totalFields += personalInfoFields.length
-    filledFields += personalInfoFields.filter((field) => field && field.trim() !== "").length
+    const personalInfoFields = Object.values(cv.personalInfo);
+    totalFields += personalInfoFields.length;
+    filledFields += personalInfoFields.filter(
+      (field) => field && field.trim() !== ""
+    ).length;
 
     // Education
     if (cv.education.length > 0) {
-      totalFields += 5 * cv.education.length // 5 fields per education entry
+      totalFields += 5 * cv.education.length; // 5 fields per education entry
       cv.education.forEach((edu) => {
-        filledFields += Object.values(edu).filter((field) => field && field.toString().trim() !== "").length
-      })
+        filledFields += Object.values(edu).filter(
+          (field) => field && field.toString().trim() !== ""
+        ).length;
+      });
     }
 
     // Experience
     if (cv.experience.length > 0) {
-      totalFields += 5 * cv.experience.length // 5 fields per experience entry
+      totalFields += 5 * cv.experience.length; // 5 fields per experience entry
       cv.experience.forEach((exp) => {
-        filledFields += Object.values(exp).filter((field) => field && field.toString().trim() !== "").length
-      })
+        filledFields += Object.values(exp).filter(
+          (field) => field && field.toString().trim() !== ""
+        ).length;
+      });
     }
 
     // Skills
     if (cv.skills.length > 0) {
-      totalFields += 2 * cv.skills.length // 2 fields per skill entry
+      totalFields += 2 * cv.skills.length; // 2 fields per skill entry
       cv.skills.forEach((skill) => {
-        filledFields += Object.values(skill).filter((field) => field !== undefined && field.toString().trim() !== "").length
-      })
+        filledFields += Object.values(skill).filter(
+          (field) => field !== undefined && field.toString().trim() !== ""
+        ).length;
+      });
     }
 
     // Projects
     if (cv.projects.length > 0) {
-      totalFields += 2 * cv.projects.length // 2 fields per project entry
+      totalFields += 2 * cv.projects.length; // 2 fields per project entry
       cv.projects.forEach((project) => {
-        filledFields += Object.values(project).filter((field) => field && field.toString().trim() !== "").length
-      })
+        filledFields += Object.values(project).filter(
+          (field) => field && field.toString().trim() !== ""
+        ).length;
+      });
     }
 
-    const progress = Math.round((filledFields / totalFields) * 100)
-    return progress
-  }
+    const progress = Math.round((filledFields / totalFields) * 100);
+    return progress;
+  }, [cv]);
 
   useEffect(() => {
     if (cv) {
-      const progress = calculateProgress()
-      if (progress !== cv.progress) {
-        updateProgress(progress)
+      // Clear any existing timeout
+      if (progressUpdateTimeout.current) {
+        clearTimeout(progressUpdateTimeout.current);
       }
-    }
-  }, [cv, updateProgress])
 
-  if (loading) {
+      // Set a new timeout to update progress after a delay
+      progressUpdateTimeout.current = setTimeout(() => {
+        const progress = calculateProgress();
+
+        // Only update if progress has changed significantly (more than 1%)
+        if (Math.abs(progress - lastCalculatedProgress.current) > 1) {
+          lastCalculatedProgress.current = progress;
+          if (progress !== cv.progress) {
+            updateProgress(progress);
+          }
+        }
+      }, 2000); // 2 second delay
+    }
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (progressUpdateTimeout.current) {
+        clearTimeout(progressUpdateTimeout.current);
+      }
+    };
+  }, [cv, calculateProgress, updateProgress]);
+
+  if (loading && !cv) {
     return (
-      (<div className="flex justify-center items-center h-[calc(100vh-4rem)]">
+      <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
         <p>Loading CV data...</p>
-      </div>)
+      </div>
     );
   }
 
   if (error) {
     return (
-      (<div className="flex justify-center items-center h-[calc(100vh-4rem)]">
+      <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
         <p className="text-red-500">{error}</p>
-      </div>)
+      </div>
     );
   }
 
   if (!cv) {
     return (
-      (<div className="flex justify-center items-center h-[calc(100vh-4rem)]">
+      <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
         <p>CV not found</p>
-      </div>)
+      </div>
     );
   }
 
   return (
-    (<div className="container mx-auto py-6">
+    <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <Button variant="ghost" onClick={() => router.push("/dashboard")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -128,12 +162,16 @@ function CVEditor() {
             <Save className="mr-2 h-4 w-4" />
             {saving ? "Saving..." : "Save"}
           </Button>
-          <Button variant="outline" onClick={() => router.push(`/cv/${id}/preview`)}>
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/cv/${id}/preview`)}
+          >
             <Download className="mr-2 h-4 w-4" />
             Preview & Download
           </Button>
         </div>
       </div>
+
       <Card className="mb-6 p-4">
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
@@ -143,6 +181,7 @@ function CVEditor() {
           <Progress value={cv.progress} className="h-2" />
         </div>
       </Card>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-5 mb-6">
           <TabsTrigger value="personal">Personal Info</TabsTrigger>
@@ -167,15 +206,14 @@ function CVEditor() {
           <ProjectsForm />
         </TabsContent>
       </Tabs>
-    </div>)
+    </div>
   );
 }
 
 export default function CVEditorPage() {
   return (
-    (<CVProvider>
+    <CVProvider>
       <CVEditor />
-    </CVProvider>)
+    </CVProvider>
   );
 }
-

@@ -11,23 +11,53 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useState, useEffect, useRef } from "react";
 
 export default function PersonalInfoForm() {
   const { cv, saveCV } = useCV();
+  const [formData, setFormData] = useState({});
+  const saveTimeout = useRef(null);
 
-  if (!cv) return null;
+  useEffect(() => {
+    if (cv) {
+      setFormData(cv.personalInfo);
+    }
+  }, [cv]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    saveCV({
-      ...cv,
-      personalInfo: {
-        ...cv.personalInfo,
-        [name]: value,
-      },
-    });
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    // Clear any existing timeout
+    if (saveTimeout.current) {
+      clearTimeout(saveTimeout.current);
+    }
+
+    // Set a new timeout to save after a delay
+    saveTimeout.current = setTimeout(() => {
+      saveCV({
+        personalInfo: {
+          ...cv.personalInfo,
+          [name]: value,
+        },
+      });
+    }, 1000); // 1 second delay
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeout.current) {
+        clearTimeout(saveTimeout.current);
+      }
+    };
+  }, []);
+
+  if (!cv) return null;
 
   return (
     <Card>
@@ -42,7 +72,7 @@ export default function PersonalInfoForm() {
             <Input
               id="fullName"
               name="fullName"
-              value={cv.personalInfo.fullName}
+              value={formData.fullName || ""}
               onChange={handleChange}
               placeholder="John Doe"
             />
@@ -52,7 +82,7 @@ export default function PersonalInfoForm() {
             <Input
               id="title"
               name="title"
-              value={cv.personalInfo.title}
+              value={formData.title || ""}
               onChange={handleChange}
               placeholder="Software Engineer"
             />
@@ -65,7 +95,7 @@ export default function PersonalInfoForm() {
               id="email"
               name="email"
               type="email"
-              value={cv.personalInfo.email}
+              value={formData.email || ""}
               onChange={handleChange}
               placeholder="john.doe@example.com"
             />
@@ -75,7 +105,7 @@ export default function PersonalInfoForm() {
             <Input
               id="phone"
               name="phone"
-              value={cv.personalInfo.phone}
+              value={formData.phone || ""}
               onChange={handleChange}
               placeholder="+1 (555) 123-4567"
             />
@@ -86,7 +116,7 @@ export default function PersonalInfoForm() {
           <Input
             id="address"
             name="address"
-            value={cv.personalInfo.address}
+            value={formData.address || ""}
             onChange={handleChange}
             placeholder="123 Main St, City, Country"
           />
@@ -96,7 +126,7 @@ export default function PersonalInfoForm() {
           <Textarea
             id="summary"
             name="summary"
-            value={cv.personalInfo.summary}
+            value={formData.summary || ""}
             onChange={handleChange}
             placeholder="A brief summary of your professional background and career goals"
             rows={5}
