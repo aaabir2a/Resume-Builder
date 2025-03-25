@@ -42,6 +42,7 @@ export async function POST(req) {
       _id: user._id.toString(),
       name: user.name,
       email: user.email,
+      username: user.username, // Include username in the response
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

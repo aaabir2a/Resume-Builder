@@ -31,11 +31,15 @@ export async function POST(req) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create a username from the email (before the @ symbol)
+    const username = email.split("@")[0];
+
     // Create user
     const now = new Date();
     const result = await usersCollection.insertOne({
       name,
       email,
+      username, // Add username field
       password: hashedPassword,
       createdAt: now,
       updatedAt: now,
@@ -46,6 +50,7 @@ export async function POST(req) {
       _id: result.insertedId.toString(),
       name,
       email,
+      username, // Include username in the response
       createdAt: now,
       updatedAt: now,
     };
