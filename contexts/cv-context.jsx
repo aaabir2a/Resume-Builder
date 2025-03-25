@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useRef,
-  useCallback,
-} from "react";
+import { createContext, useContext, useState, useRef } from "react";
 
 const CVContext = createContext(undefined);
 
@@ -16,7 +10,6 @@ export function CVProvider({ children }) {
   const [error, setError] = useState(null);
   const fetchInProgress = useRef(false);
   const saveInProgress = useRef(false);
-  const lastSavedCV = useRef(null);
 
   const fetchCV = async (id) => {
     if (fetchInProgress.current) return;
@@ -34,7 +27,6 @@ export function CVProvider({ children }) {
 
       const data = await res.json();
       setCV(data.cv);
-      lastSavedCV.current = JSON.stringify(data.cv);
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
@@ -47,51 +39,44 @@ export function CVProvider({ children }) {
     }
   };
 
-  const saveCV = useCallback(
-    async (cvData) => {
-      if (saveInProgress.current) return;
-      if (!cv?._id) return;
+  const saveCV = async (cvData) => {
+    if (saveInProgress.current || !cv?._id) return false;
 
-      // Check if there are actual changes to save
-      const newCVString = JSON.stringify({ ...cv, ...cvData });
-      if (newCVString === lastSavedCV.current) return;
+    saveInProgress.current = true;
+    setLoading(true);
+    setError(null);
 
-      saveInProgress.current = true;
-      setLoading(true);
-      setError(null);
+    try {
+      const res = await fetch(`/api/cv/${cv._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...cv,
+          ...cvData,
+        }),
+      });
 
-      try {
-        const res = await fetch(`/api/cv/${cv._id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...cv,
-            ...cvData,
-          }),
-        });
-
-        if (!res.ok) {
-          throw new Error("Failed to save CV");
-        }
-
-        const data = await res.json();
-        setCV(data.cv);
-        lastSavedCV.current = JSON.stringify(data.cv);
-      } catch (error) {
-        if (error instanceof Error) {
-          setError(error.message);
-        } else {
-          setError("An unknown error occurred");
-        }
-      } finally {
-        setLoading(false);
-        saveInProgress.current = false;
+      if (!res.ok) {
+        throw new Error("Failed to save CV");
       }
-    },
-    [cv]
-  );
+
+      const data = await res.json();
+      setCV(data.cv);
+      return true;
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("An unknown error occurred");
+      }
+      return false;
+    } finally {
+      setLoading(false);
+      saveInProgress.current = false;
+    }
+  };
 
   const createCV = async (cvData) => {
     if (saveInProgress.current) return null;
@@ -115,7 +100,6 @@ export function CVProvider({ children }) {
 
       const data = await res.json();
       setCV(data.cv);
-      lastSavedCV.current = JSON.stringify(data.cv);
       return data.cv._id;
     } catch (error) {
       if (error instanceof Error) {
@@ -130,15 +114,15 @@ export function CVProvider({ children }) {
     }
   };
 
-  const updateProgress = useCallback(
-    async (progress) => {
-      if (!cv || saveInProgress.current) return;
-      if (cv.progress === progress) return;
+  const updateCV = (cvData) => {
+    if (!cv) return;
 
-      await saveCV({ ...cv, progress });
-    },
-    [cv, saveCV]
-  );
+    // Update the CV state locally without saving to the server
+    setCV((prevCV) => ({
+      ...prevCV,
+      ...cvData,
+    }));
+  };
 
   return (
     <CVContext.Provider
@@ -149,7 +133,7 @@ export function CVProvider({ children }) {
         fetchCV,
         saveCV,
         createCV,
-        updateProgress,
+        updateCV,
       }}
     >
       {children}

@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CVProvider } from "@/contexts/cv-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Download, Save } from "lucide-react";
+import { ArrowLeft, Eye, Save } from "lucide-react";
 import PersonalInfoForm from "@/components/cv/personal-info-form";
 import EducationForm from "@/components/cv/education-form";
 import ExperienceForm from "@/components/cv/experience-form";
@@ -18,12 +18,10 @@ import { useCV } from "@/contexts/cv-context";
 function CVEditor() {
   const { id } = useParams();
   const router = useRouter();
-  const { cv, loading, error, fetchCV, saveCV, updateProgress } = useCV();
+  const { cv, loading, error, fetchCV, saveCV } = useCV();
   const [activeTab, setActiveTab] = useState("personal");
   const [saving, setSaving] = useState(false);
   const hasFetched = useRef(false);
-  const progressUpdateTimeout = useRef(null);
-  const lastCalculatedProgress = useRef(0);
 
   useEffect(() => {
     if (id && typeof id === "string" && !hasFetched.current) {
@@ -38,9 +36,24 @@ function CVEditor() {
     setSaving(true);
     await saveCV(cv);
     setSaving(false);
+    alert("CV saved successfully!");
   };
 
-  const calculateProgress = useCallback(() => {
+  const handleShowPreview = async () => {
+    if (!cv) return;
+
+    setSaving(true);
+    const success = await saveCV(cv);
+    setSaving(false);
+
+    if (success) {
+      router.push(`/cv/${id}/preview`);
+    } else {
+      alert("Failed to save CV. Please try again before previewing.");
+    }
+  };
+
+  const calculateProgress = () => {
     if (!cv) return 0;
 
     let totalFields = 0;
@@ -93,38 +106,8 @@ function CVEditor() {
       });
     }
 
-    const progress = Math.round((filledFields / totalFields) * 100);
-    return progress;
-  }, [cv]);
-
-  useEffect(() => {
-    if (cv) {
-      // Clear any existing timeout
-      if (progressUpdateTimeout.current) {
-        clearTimeout(progressUpdateTimeout.current);
-      }
-
-      // Set a new timeout to update progress after a delay
-      progressUpdateTimeout.current = setTimeout(() => {
-        const progress = calculateProgress();
-
-        // Only update if progress has changed significantly (more than 1%)
-        if (Math.abs(progress - lastCalculatedProgress.current) > 1) {
-          lastCalculatedProgress.current = progress;
-          if (progress !== cv.progress) {
-            updateProgress(progress);
-          }
-        }
-      }, 2000); // 2 second delay
-    }
-
-    // Cleanup timeout on unmount
-    return () => {
-      if (progressUpdateTimeout.current) {
-        clearTimeout(progressUpdateTimeout.current);
-      }
-    };
-  }, [cv, calculateProgress, updateProgress]);
+    return Math.round((filledFields / totalFields) * 100);
+  };
 
   if (loading && !cv) {
     return (
@@ -150,6 +133,8 @@ function CVEditor() {
     );
   }
 
+  const progress = calculateProgress();
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
@@ -162,12 +147,9 @@ function CVEditor() {
             <Save className="mr-2 h-4 w-4" />
             {saving ? "Saving..." : "Save"}
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/cv/${id}/preview`)}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Preview & Download
+          <Button onClick={handleShowPreview} disabled={saving}>
+            <Eye className="mr-2 h-4 w-4" />
+            {saving ? "Saving..." : "Show Preview"}
           </Button>
         </div>
       </div>
@@ -176,9 +158,9 @@ function CVEditor() {
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-medium">Completion Progress</h2>
-            <span className="text-sm font-medium">{cv.progress}%</span>
+            <span className="text-sm font-medium">{progress}%</span>
           </div>
-          <Progress value={cv.progress} className="h-2" />
+          <Progress value={progress} className="h-2" />
         </div>
       </Card>
 

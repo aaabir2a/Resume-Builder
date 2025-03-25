@@ -11,12 +11,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 export default function PersonalInfoForm() {
-  const { cv, saveCV } = useCV();
+  const { cv, updateCV } = useCV();
   const [formData, setFormData] = useState({});
-  const saveTimeout = useRef(null);
 
   useEffect(() => {
     if (cv) {
@@ -27,35 +26,18 @@ export default function PersonalInfoForm() {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    setFormData((prev) => ({
-      ...prev,
+    const updatedFormData = {
+      ...formData,
       [name]: value,
-    }));
-
-    // Clear any existing timeout
-    if (saveTimeout.current) {
-      clearTimeout(saveTimeout.current);
-    }
-
-    // Set a new timeout to save after a delay
-    saveTimeout.current = setTimeout(() => {
-      saveCV({
-        personalInfo: {
-          ...cv.personalInfo,
-          [name]: value,
-        },
-      });
-    }, 1000); // 1 second delay
-  };
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimeout.current) {
-        clearTimeout(saveTimeout.current);
-      }
     };
-  }, []);
+
+    setFormData(updatedFormData);
+
+    // Update the CV state locally without saving to the server
+    updateCV({
+      personalInfo: updatedFormData,
+    });
+  };
 
   if (!cv) return null;
 
