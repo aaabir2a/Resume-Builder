@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/", "destination": "/" },
     { "source": "/api/cv/:path*", "destination": "/api/cv/:path*" },
     { "source": "/cv/:path*", "destination": "/cv/:path*" },
     { "source": "/dashboard/:path*", "destination": "/dashboard/:path*" },
