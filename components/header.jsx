@@ -11,10 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { FileText, User, Menu } from "lucide-react";
+import { FileText, User } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Sidebar } from "@/components/sidebar";
+import { MainSidebar } from "@/components/main-sidebar";
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -22,20 +21,12 @@ export default function Header() {
   return (
     <header className="border-b">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <div className="flex items-center">
-          <Sheet>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
-              <Sidebar />
-            </SheetContent>
-          </Sheet>
-          <Link href="/dashboard" className="flex items-center">
-            <FileText className="h-6 w-6 mr-2" />
+        <div className="flex items-center gap-2">
+          <div className="lg:hidden">
+            <MainSidebar />
+          </div>
+          <Link href={user ? "/dashboard" : "/"} className="flex items-center">
+            <FileText className="h-6 w-6 mr-2 text-green-500" />
             <span className="font-bold">CV Builder</span>
           </Link>
         </div>

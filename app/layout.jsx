@@ -10,6 +10,7 @@ export const metadata = {
   description: "Build and manage your professional CV",
 };
 
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">

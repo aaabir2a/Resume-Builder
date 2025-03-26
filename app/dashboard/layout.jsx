@@ -1,15 +1,15 @@
-import { Sidebar } from "@/components/sidebar";
+import { MainSidebar } from "@/components/main-sidebar";
 import Header from "@/components/header";
 
 export default function DashboardLayout({ children }) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col">
       <Header />
-      <div className="flex-1 flex">
-        <aside className="hidden md:flex w-64 flex-col border-r bg-background">
-          <Sidebar />
+      <div className="flex flex-1">
+        <aside className="hidden w-64 border-r lg:block">
+          <MainSidebar className="h-full" />
         </aside>
-        <main className="flex-1 bg-muted/30 p-6">{children}</main>
+        <main className="flex-1 bg-muted/30">{children}</main>
       </div>
     </div>
   );
