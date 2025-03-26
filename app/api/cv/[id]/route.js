@@ -24,6 +24,12 @@ export async function GET(request, context) {
       userId: user._id,
     });
 
+
+
+
+
+
+    
     if (!cv) {
       return NextResponse.json({ error: "CV not found" }, { status: 404 });
     }
